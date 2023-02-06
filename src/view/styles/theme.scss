@@ -1,0 +1,29 @@
+.dark-theme {
+  background-color: black;
+  color: white;
+  --backgroundColor: #1d74ff;
+  --textColorcolor: white;
+  --subTextColor: #96A1BB;
+  --highlightTextColor: #1d74ff;
+  --borderColor: #E8E9F0;
+  --disabledColor: #96A1BB;
+  --buttonBackgroundColor: #ff2c2c;
+  --buttonTextColor: white;
+  --secondButtonBackgroundColor: #ff1d1d;
+  --secondButtonTextColor: white;
+}
+
+.light-theme {
+  background-color: white;
+  color: black;
+  --backgroundColor: white;
+  --textColorcolor: black;
+  --subTextColor: #96A1BB;
+  --highlightTextColor: #1d74ff;
+  --borderColor: #E8E9F0;
+  --disabledColor: #96A1BB;
+  --buttonBackgroundColor: #1d74ff;
+  --buttonTextColor: white;
+  --secondButtonBackgroundColor: #1d74ff;
+  --secondButtonTextColor: white;
+}

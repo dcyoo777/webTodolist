@@ -1,0 +1,12 @@
+#layout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 0 auto;
+  width: 100vw;
+  height: 100vh;
+  min-height: 500px;
+  overflow: auto;
+  background-color: #96A1BB;
+}

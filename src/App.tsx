@@ -1,26 +1,32 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from 'react'
+import { BrowserRouter } from 'react-router-dom'
+import RootRouter from './view/RootRouter'
 
-function App() {
+export default function App() {
+
+  const [theme, setTheme] = useState("light-theme")
+
+  useEffect(() => {
+    if (!window.matchMedia) {
+      return
+    }
+    setTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark-theme" : "light-theme")
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+      const newColorScheme = event.matches ? "dark-theme" : "light-theme";
+      setTheme(newColorScheme)
+    });
+  }, [])
+
+  useEffect(() => {
+    const element = document.getElementById("root");
+    if (element) {
+      element.className = theme;
+    }
+  }, [theme])
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    <BrowserRouter>
+      <RootRouter />
+    </BrowserRouter>
+  )
 }
-
-export default App;

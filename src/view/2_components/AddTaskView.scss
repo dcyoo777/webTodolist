@@ -1,0 +1,36 @@
+.add-task-view {
+  position: relative;
+  max-width: 400px;
+  width: 100%;
+  min-height: 80px;
+  margin: 8px 16px 0;
+  padding: 8px 12px 8px;
+  border: solid 2px lightblue;
+  border-radius: 12px;
+  background-color: white;
+  color: black;
+
+  &-button-wrapper{
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  &-add-button{
+    margin-top: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background-color: #7BD9F6;
+  }
+
+  &-button{
+    display: block;
+    margin: 8px auto 0;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background-color: #7BD9F6;
+    &:disabled{
+      background-color: #D3D3D3;
+    }
+  }
+}

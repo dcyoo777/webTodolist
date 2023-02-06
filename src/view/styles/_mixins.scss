@@ -1,0 +1,55 @@
+@import 'src/view/styles/variable';
+
+@mixin spread-map($map: ()) {
+
+  @each $key,
+  $value in $map {
+    #{$key}: $value;
+  }
+}
+
+@mixin media($width) {
+  @media only screen and (max-width: $width) {
+    @content;
+  }
+}
+
+@mixin border-radius($radius) {
+  -webkit-border-radius: $radius;
+  -moz-border-radius: $radius;
+  -ms-border-radius: $radius;
+  border-radius: $radius;
+}
+
+@mixin x-scroll-without-scrollbar() {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@mixin font-face($name, $file, $weight: noraml, $style: normal) {
+  @font-face {
+    font-family: '#{$name}';
+    font-weight: $weight;
+    font-style: $style;
+    src: url('../assets/fonts/#{$file}.otf') format('truetype');
+  }
+}
+
+// @include border-box();
+@mixin border-box() {
+  -webkit-box-sizing: border-box;
+  /* Safari/Chrome, other WebKit */
+  -moz-box-sizing: border-box;
+  /* Firefox, other Gecko */
+  box-sizing: border-box;
+  /* Opera/IE 8+ */
+}
+
+// @include font-face('설정할 폰트 이름', '폰트 파일 이름');
+// @include font-face('설정할 폰트 이름', '폰트 파일 이름', bold);
