@@ -1,25 +1,18 @@
 import './TodoList.scss';
 import {createContext, useCallback, useEffect, useState} from 'react';
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
 import CategoryView from './CategoryView';
 import { createCategoryFromServer, createTaskFromServer, deleteCategoryFromServer, deleteTaskFromServer, getCategoriesFromServer, getTasksFromServer, reorderCategoryFromServer, reorderTaskFromServer, updateCategoryFromServer, updateTaskFromServer } from 'src/server/todolist/todolistAPI';
 import _ from 'lodash'
 import AddCategory from '../2_components/AddCategory';
+import { DragDropContext, Droppable } from 'react-beautiful-dnd';
 
 const initialTodolistContextValue = {
   addCategory: () => {},
   deleteCategory: () => {},
   editCategory: () => {},
-  moveCategory: () => {},
-  reorderCategory: () => {},
-  movingTaskId: 0,
-  setMovingTaskId: () => {},  
   addTask: () => {},
   deleteTask: () => {},
   editTask: () => {},
-  moveTask: () => {},
-  reorderTask: () => {},
 }
 
 export const TodolistContext = createContext(initialTodolistContextValue)
@@ -27,7 +20,7 @@ export const TodolistContext = createContext(initialTodolistContextValue)
 const TodoList = function ({isReady}) {
   const [categories, setCategories] = useState([])
   const [tasks, setTasks] = useState([])
-  const [movingTaskId, setMovingTaskId] = useState(0)
+  const [isShowAddCategory, setIsShowCategory] = useState(true);
 
   const addCategory = useCallback(async(inputs) => {
       const {name, color} = inputs;
@@ -60,37 +53,6 @@ const TodoList = function ({isReady}) {
     }
   }, [])
 
-  const moveCategory = useCallback(async(fromCategory, toCategory) => {
-    setCategories(categories => {
-      const currentFromCategory = categories.find(category => category.categoryId === fromCategory.categoryId)
-      const targetCategoryIndex = categories.findIndex(category => category.categoryId === toCategory.categoryId);
-      const direction = currentFromCategory.order > toCategory.order ? -1 : 1
-      let updateCategory;
-      if(targetCategoryIndex === 0){
-        updateCategory = {...fromCategory, order: toCategory.order / 2}
-      }else if(targetCategoryIndex === categories.length - 1){
-        updateCategory = {...fromCategory, order: toCategory.order + 60}
-      }else{
-        updateCategory = {...fromCategory, order: (categories[targetCategoryIndex + direction].order + toCategory.order) / 2}
-      }
-      return _.orderBy(categories.map(category => {
-        if(category.categoryId === updateCategory.categoryId){
-          return updateCategory;
-        }
-        return category;
-      }), 'order')
-    })
-  }, [])
-
-  const reorderCategory = useCallback(async(categoryId) => {
-    const targetCategoryIndex = categories.findIndex(cagegory => cagegory.categoryId === categoryId)
-    reorderCategoryFromServer({params: {categoryId}, body: {
-        ...(targetCategoryIndex !== categories.length - 1 && {followingCategoryId: categories[targetCategoryIndex + 1].categoryId})
-    }}).finally(() => {
-      getCategoriesFromServer().then(res => setCategories(res))
-    })
-  }, [categories])
-
   const addTask = useCallback(async(categoryId, inputs) => {
     const result = await createTaskFromServer({
       query: {categoryId},
@@ -107,7 +69,6 @@ const TodoList = function ({isReady}) {
   }, [])
 
   const editTask = useCallback(async(inputs) => {
-    console.log(inputs)
     const {taskId, ...rest} = inputs
     const result = await updateTaskFromServer({
       params: {taskId},
@@ -123,45 +84,93 @@ const TodoList = function ({isReady}) {
     }
   }, [])
 
-  const moveTask = useCallback(async(fromTask, toTask) => {
-    setTasks(tasks => {
-      const currentFromTask = tasks.find(task => task.taskId === fromTask.taskId)
-      const targetCategoryTasks = tasks.filter(task => task.categoryId === toTask.categoryId);
-      const targetTaskIndex = targetCategoryTasks.findIndex(task => task.taskId === toTask.taskId);
-      let direction = 1
-      if(toTask.categoryId === fromTask.categoryId){
-        direction = currentFromTask.order > toTask.order ? -1 : 1
-      } else {
-        direction = 1 
-      }
-      let updateCategory;
-      if(targetTaskIndex === 0){
-        updateCategory = {...fromTask, categoryId: toTask.categoryId, order: toTask.order / 2}
-      }else if(targetTaskIndex === targetCategoryTasks.length - 1){
-        updateCategory = {...fromTask, categoryId: toTask.categoryId, order: toTask.order + 60}
-      }else{
-        updateCategory = {...fromTask, categoryId: toTask.categoryId, order: (targetCategoryTasks[targetTaskIndex + direction].order + toTask.order) / 2}
-      }
-      return _.orderBy(tasks.map(task => {
-        if(task.taskId === updateCategory.taskId){
-          return updateCategory;
+  const dropTask = (draggableId, droppableId, index) => {
+    const taskId = Number(draggableId.split('_')[1]);
+    const fromTask = tasks.find(task => task.taskId === taskId);
+    const categoryId = Number(droppableId.split('_')[1]);
+    const targetCategoryTasks = tasks.filter(task => task.categoryId === categoryId && task.taskId !== taskId);
+    const followingTaskId = targetCategoryTasks.length > index ? targetCategoryTasks[index].taskId : undefined
+    
+    let updateTask;
+
+    if(!followingTaskId){
+      updateTask = {...fromTask, categoryId, order: (targetCategoryTasks[targetCategoryTasks.length - 1]?.order ?? 0) + 60}
+    } else if (index === 0){
+      updateTask = {...fromTask, categoryId, order: targetCategoryTasks[0].order / 2}
+    } else {
+      const targetIndex = targetCategoryTasks.findIndex(task => task.taskId === followingTaskId)
+      updateTask = {...fromTask, categoryId, order: ((targetCategoryTasks[targetIndex - 1]?.order ?? 0) + targetCategoryTasks[targetIndex].order) / 2}
+    }
+
+    setTasks(prev => {
+      return _.orderBy(prev.map(item => {
+        if(updateTask.taskId !== item.taskId){
+          return item
         }
-        return task;
+        return updateTask
       }), 'order')
     })
-  }, [])
 
-  const reorderTask = useCallback(async(taskId) => {
-    const targetTask = tasks.find(task => task.taskId === taskId)
-    const targetCategoryTasks = tasks.filter(task => task.categoryId === targetTask.categoryId)
-    const targetCategoryIndex = targetCategoryTasks.findIndex(task => task.taskId === taskId)
     reorderTaskFromServer({params: {taskId}, body: {
-        categoryId: targetTask.categoryId,
-        ...(targetCategoryIndex !== targetCategoryTasks.length - 1 && {followingTaskId: targetCategoryTasks[targetCategoryIndex + 1].taskId})
+      categoryId,
+      followingTaskId
     }}).finally(() => {
       getTasksFromServer().then(res => setTasks(res))
     })
-  }, [tasks])
+  }
+
+  const dropCategory = (draggableId, index) => {
+    const categoryId = Number(draggableId.split('_')[1]);
+    const fromCategory = categories.find(category => category.categoryId === categoryId);
+    const categoriesWithoutDrag = categories.filter(category => category.categoryId !== categoryId);
+    const followingCategoryId = categoriesWithoutDrag.length > index ? categoriesWithoutDrag[index].categoryId : undefined
+    
+    let updateCategory;
+
+    if(!followingCategoryId){
+      updateCategory = {...fromCategory, order: (categoriesWithoutDrag[categoriesWithoutDrag.length - 1]?.order ?? 0) + 60}
+    } else if (index === 0){
+      updateCategory = {...fromCategory, order: categoriesWithoutDrag[0].order / 2}
+    } else {
+      const targetIndex = categoriesWithoutDrag.findIndex(category => category.categoryId === followingCategoryId)
+      updateCategory = {...fromCategory, order: ((categoriesWithoutDrag[targetIndex - 1]?.order ?? 0) + categoriesWithoutDrag[targetIndex].order) / 2}
+    }
+
+    setCategories(prev => _.orderBy(prev.map(item => {
+      if(updateCategory.categoryId !== item.categoryId){
+        return item
+      }
+      return updateCategory
+    }), 'order'))
+
+    reorderCategoryFromServer({params: {categoryId}, body: {
+      followingCategoryId
+    }}).finally(() => {
+      getCategoriesFromServer().then(res => setCategories(res))
+    })
+  }
+
+  const onDragEnd = (result) => {
+    setIsShowCategory(true)
+    if (!result.destination) {
+      return;
+    }
+
+    const {droppableId, index} = result.destination
+    const {draggableId} = result
+
+    if(draggableId.includes('task') && droppableId.includes('category')){
+      dropTask(draggableId, droppableId, index)
+    } else if (draggableId.includes('category') && droppableId === 'todolist'){
+      dropCategory(draggableId, index)
+    }
+  }
+
+  const onDragStart = (result) => {
+    if(result.draggableId.includes('category')){
+      setIsShowCategory(false)
+    }
+  }
 
   useEffect(() => {
     if(isReady){
@@ -178,20 +187,24 @@ const TodoList = function ({isReady}) {
   return (
     <TodolistContext.Provider value={{
       addCategory, deleteCategory, editCategory,
-      moveCategory, reorderCategory,
-      movingTaskId, setMovingTaskId,
       addTask, deleteTask, editTask,
-      moveTask, reorderTask,
     }}>
-      <DndProvider backend={HTML5Backend}>
-        <div className='todo-list'>
-          {categories.map(category => <CategoryView category={category} 
-            key={category.categoryId} 
-            tasks={tasks.filter(task => task.categoryId === category.categoryId)}
-          />)}
-          <AddCategory />
-        </div>
-      </DndProvider>
+      <DragDropContext onDragEnd={onDragEnd} onDragStart={onDragStart}>
+        <Droppable droppableId={`todolist`} type={'category'} direction={'horizontal'}>
+          {(provided) => <div className='todo-list'             
+            ref={provided.innerRef} 
+            {...provided.droppableProps}
+          >
+            {categories.map((category, index) => <CategoryView category={category} 
+              key={category.categoryId} 
+              tasks={tasks.filter(task => task.categoryId === category.categoryId)}
+              index={index}
+            />)}
+            {provided.placeholder}
+            {isShowAddCategory && <AddCategory />}
+          </div>}
+        </Droppable>
+      </DragDropContext>
     </TodolistContext.Provider>
     
   );
